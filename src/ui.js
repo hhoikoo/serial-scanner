@@ -91,10 +91,13 @@ export function initApp() {
       this.foundSerials = [];
     },
 
-    // Reset found serials
+    // Reset found serials and border state
     resetSearch() {
       resetFoundSerials();
       this.foundSerials = [];
+      if (this.targetCount > 0 && this.scannerActive) {
+        this.borderState = 'searching';
+      }
     },
 
     // Generate PDF
