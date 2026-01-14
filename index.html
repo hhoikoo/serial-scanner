@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>QR Box Finder</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>">
+</head>
+<body x-data="app" :class="'border-' + borderState" x-cloak>
+
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <h1>QR Box Finder</h1>
+    </header>
+
+    <!-- Mode Toggle Tabs -->
+    <nav class="tabs">
+      <button
+        :class="{ active: mode === 'scanner' }"
+        @click="switchMode('scanner')"
+      >
+        Scanner
+      </button>
+      <button
+        :class="{ active: mode === 'generator' }"
+        @click="switchMode('generator')"
+      >
+        Generator
+      </button>
+    </nav>
+
+    <!-- Scanner Mode -->
+    <div x-show="mode === 'scanner'" class="scanner-mode">
+      <!-- Search Input -->
+      <div class="search-panel">
+        <label for="search-input">Search for serial numbers:</label>
+        <textarea
+          id="search-input"
+          x-model="searchInput"
+          placeholder="Enter serial numbers to find (one per line or comma-separated)"
+          rows="3"
+          @input="updateSearchTargets()"
+        ></textarea>
+
+        <div class="button-row" x-show="searchInput.trim()">
+          <button class="secondary" @click="resetSearch()">
+            Reset
+          </button>
+        </div>
+      </div>
+
+      <!-- Target Info -->
+      <div class="target-info" x-show="targetCount > 0">
+        <span>Searching for <span class="count" x-text="targetCount"></span> serial(s)</span>
+        <span>Found: <span class="count" x-text="foundSerials.length"></span></span>
+      </div>
+
+      <!-- Camera Error -->
+      <div class="error-message" x-show="scannerError" x-text="scannerError"></div>
+
+      <!-- Camera View -->
+      <div class="camera-container">
+        <div x-show="scannerActive" id="qr-reader"></div>
+
+        <!-- Camera placeholder when not active -->
+        <div class="camera-placeholder" x-show="!scannerActive">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <p x-show="cameraAvailable">Click "Start Camera" to begin scanning</p>
+          <p x-show="!cameraAvailable">No camera detected on this device</p>
+        </div>
+      </div>
+
+      <!-- Found Serials Display -->
+      <div class="found-panel" x-show="foundSerials.length > 0">
+        <h3>Found Serials:</h3>
+        <ul>
+          <template x-for="serial in foundSerials" :key="serial">
+            <li x-text="serial"></li>
+          </template>
+        </ul>
+      </div>
+
+      <!-- Scanner Controls -->
+      <div class="controls-panel">
+        <button
+          x-show="!scannerActive"
+          @click="startScanner()"
+          :disabled="!cameraAvailable"
+        >
+          Start Camera
+        </button>
+        <button
+          x-show="scannerActive"
+          class="danger"
+          @click="stopScanner()"
+        >
+          Stop Camera
+        </button>
+      </div>
+
+      <!-- Instructions -->
+      <div class="instructions" x-show="!scannerActive && targetCount === 0">
+        <h4>How to use:</h4>
+        <ol>
+          <li>Enter the serial numbers you want to find</li>
+          <li>Start the camera to begin scanning</li>
+          <li>Point the camera at QR codes on boxes</li>
+          <li>The border turns green when a match is found</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Generator Mode -->
+    <div x-show="mode === 'generator'" class="generator-mode">
+      <div class="generator-panel">
+        <label for="generator-input">Enter serial numbers:</label>
+        <textarea
+          id="generator-input"
+          x-model="generatorInput"
+          placeholder="Enter serial numbers (one per line or comma-separated)&#10;&#10;Example:&#10;BOX-001&#10;BOX-002&#10;BOX-003"
+          rows="10"
+        ></textarea>
+
+        <div class="serial-count">
+          <span x-text="generatorSerialCount"></span> QR code(s) will be generated
+        </div>
+
+        <!-- Error message -->
+        <div class="error-message" x-show="generatorError" x-text="generatorError"></div>
+
+        <!-- Progress bar -->
+        <template x-if="generating">
+          <div>
+            <div class="progress-bar">
+              <div
+                class="progress-bar-fill"
+                :style="'width: ' + (generatorTotal > 0 ? (generatorProgress / generatorTotal * 100) : 0) + '%'"
+              ></div>
+            </div>
+            <div class="progress-text">
+              Generating <span x-text="generatorProgress"></span> / <span x-text="generatorTotal"></span>
+            </div>
+          </div>
+        </template>
+
+        <button
+          @click="generatePDF()"
+          :disabled="generating || generatorSerialCount === 0"
+        >
+          <span x-show="!generating">Generate PDF</span>
+          <span x-show="generating">Generating...</span>
+        </button>
+      </div>
+
+      <!-- Instructions -->
+      <div class="instructions">
+        <h4>About generated PDFs:</h4>
+        <ol>
+          <li>PDFs are formatted for A4 paper</li>
+          <li>Each page contains up to 20 QR codes in a 4x5 grid</li>
+          <li>QR codes are ~4cm x 4cm with the serial number below</li>
+          <li>Cut lines are included for easy separation</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

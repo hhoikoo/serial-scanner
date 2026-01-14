@@ -1,0 +1,19 @@
+{
+  "name": "qr-box-finder",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "alpinejs": "^3.13.0",
+    "html5-qrcode": "^2.3.8",
+    "jspdf": "^2.5.1",
+    "qrcode": "^1.5.3"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}
