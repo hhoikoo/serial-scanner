@@ -1,9 +1,13 @@
 /**
  * Scanner Module
- * Handles QR code scanning with camera using native BarcodeDetector API
+ * Handles QR code scanning with camera using BarcodeDetector API (with polyfill for Safari)
  */
 
+import { BarcodeDetector as BarcodeDetectorPolyfill } from 'barcode-detector';
 import { decodeQRPayload } from './qr-utils.js';
+
+// Use native BarcodeDetector if available, otherwise use polyfill
+const BarcodeDetector = window.BarcodeDetector || BarcodeDetectorPolyfill;
 
 // Scanner state
 let isScanning = false;
@@ -41,11 +45,6 @@ let onBorderStateChange = null;
 export async function startScanner(containerId) {
   if (isScanning) {
     return;
-  }
-
-  // Check for BarcodeDetector support
-  if (!('BarcodeDetector' in window)) {
-    throw new Error('BarcodeDetector API not supported in this browser');
   }
 
   const container = document.getElementById(containerId);

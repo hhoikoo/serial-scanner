@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "alpinejs": "^3.13.0",
+    "barcode-detector": "^3.0.8",
     "html5-qrcode": "^2.3.8",
     "jspdf": "^2.5.1",
     "qrcode": "^1.5.3"
